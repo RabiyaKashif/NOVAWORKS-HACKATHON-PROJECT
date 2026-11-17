@@ -1,8 +1,11 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-const DEFAULT_DB_PATH = path.resolve(process.cwd(), 'data', 'novaworks.db');
+const DEFAULT_DB_PATH = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'novaworks.db')
+  : path.resolve(process.cwd(), 'data', 'novaworks.db');
 const dbPath = process.env.DATABASE_PATH
   ? path.resolve(process.cwd(), process.env.DATABASE_PATH)
   : DEFAULT_DB_PATH;

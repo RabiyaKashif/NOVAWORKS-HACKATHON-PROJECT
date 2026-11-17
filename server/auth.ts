@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { NextFunction, Request, Response } from 'express';
@@ -36,6 +36,16 @@ function resolveSessionSecret(): string {
   const envSecret = process.env.SESSION_SECRET;
   if (envSecret && envSecret !== 'CHANGE_ME_SESSION_SECRET') {
     return envSecret;
+  }
+  if (process.env.VERCEL) {
+    const seed =
+      process.env.GEMINI_API_KEY ||
+      process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+      process.env.VERCEL_URL ||
+      'novaworks-vercel-default-session-seed';
+    return createHash('sha256')
+      .update(`novaworks-session:${seed}`)
+      .digest('hex');
   }
   const secretPath = path.resolve(process.cwd(), 'data', '.session_secret');
   try {

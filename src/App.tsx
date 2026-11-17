@@ -242,7 +242,9 @@ export default function App() {
 
       const startParsed = await parseJsonWithDiagnostics<{
         jobId?: string;
-        status?: string;
+        status?: 'pending' | 'completed' | 'failed';
+        httpStatus?: number;
+        payload?: ExtractionOutcomePayload;
         error?: string;
       }>(startRes);
 
@@ -258,52 +260,65 @@ export default function App() {
         );
       }
 
-      if (!startRes.ok || !startParsed.data.jobId) {
+      if (!startRes.ok) {
         throw new Error(
           startParsed.data.error ||
             `Failed to start transcript extraction (HTTP ${startRes.status}).`
         );
       }
 
-      const jobId = startParsed.data.jobId;
       let outcomeStatus = 500;
       let payload: ExtractionOutcomePayload | null = null;
 
-      // Poll up to ~180s without holding any single HTTP request open past proxy limits
-      for (let attempt = 0; attempt < 225; attempt += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 800));
-        const pollRes = await apiFetch(`/api/projects/jobs/${encodeURIComponent(jobId)}`);
-        if (pollRes.status === 401) {
-          handleUnauthorizedSession();
-          return;
-        }
-        const pollParsed = await parseJsonWithDiagnostics<{
-          status?: 'pending' | 'completed' | 'failed';
-          httpStatus?: number;
-          payload?: ExtractionOutcomePayload;
-          error?: string;
-        }>(pollRes);
-
-        if (!pollRes.ok || !pollParsed.data) {
+      if (startParsed.data.status === 'completed' && startParsed.data.payload) {
+        outcomeStatus = startParsed.data.httpStatus ?? 200;
+        payload = startParsed.data.payload;
+      } else {
+        if (!startParsed.data.jobId) {
           throw new Error(
-            pollParsed.data?.error ||
-              `Lost connection while polling extraction job (HTTP ${pollRes.status}).`
+            startParsed.data.error ||
+              `Failed to start transcript extraction (HTTP ${startRes.status}).`
           );
         }
 
-        if (pollParsed.data.status === 'pending') {
-          continue;
-        }
+        const jobId = startParsed.data.jobId;
 
-        if (pollParsed.data.status === 'failed') {
-          throw new Error(
-            pollParsed.data.error || 'Transcript extraction failed on the server.'
-          );
-        }
+        // Poll up to ~180s without holding any single HTTP request open past proxy limits
+        for (let attempt = 0; attempt < 225; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          const pollRes = await apiFetch(`/api/projects/jobs/${encodeURIComponent(jobId)}`);
+          if (pollRes.status === 401) {
+            handleUnauthorizedSession();
+            return;
+          }
+          const pollParsed = await parseJsonWithDiagnostics<{
+            status?: 'pending' | 'completed' | 'failed';
+            httpStatus?: number;
+            payload?: ExtractionOutcomePayload;
+            error?: string;
+          }>(pollRes);
 
-        outcomeStatus = pollParsed.data.httpStatus ?? 200;
-        payload = pollParsed.data.payload ?? null;
-        break;
+          if (!pollRes.ok || !pollParsed.data) {
+            throw new Error(
+              pollParsed.data?.error ||
+                `Lost connection while polling extraction job (HTTP ${pollRes.status}).`
+            );
+          }
+
+          if (pollParsed.data.status === 'pending') {
+            continue;
+          }
+
+          if (pollParsed.data.status === 'failed') {
+            throw new Error(
+              pollParsed.data.error || 'Transcript extraction failed on the server.'
+            );
+          }
+
+          outcomeStatus = pollParsed.data.httpStatus ?? 200;
+          payload = pollParsed.data.payload ?? null;
+          break;
+        }
       }
 
       if (!payload) {
