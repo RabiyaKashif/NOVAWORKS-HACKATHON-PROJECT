@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Newsreader", Georgia, Cambria, "Times New Roman", serif;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-alabaster: #faf9f5;
+  --color-stone-low: #f5f4f0;
+  --color-stone-mid: #efeeea;
+  --color-stone-high: #e3e2df;
+  --color-sapphire: #0d1b3e;
+  --color-sapphire-deep: #00020e;
+  --color-iris: #5b3bdf;
+  --color-iris-bright: #6344e7;
+  --color-iris-tint: #e5deff;
+  --color-iris-subtle: #f1edff;
+  --color-ink: #1b1c1a;
+  --color-ink-muted: #45464e;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: #faf9f5;
+    color: #1b1c1a;
+    scroll-behavior: smooth;
+  }
+
+  .font-editorial {
+    font-family: var(--font-serif);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes orbital-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+}
+
+.orbital-node-pulse {
+  animation: orbital-pulse 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbital-node-pulse {
+    animation: none;
+  }
+}
